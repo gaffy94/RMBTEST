@@ -21,7 +21,7 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 @RestController
-@RequestMapping("/customer")
+@RequestMapping("/api/customer")
 @Api(tags = "Customer Info APIs")
 public class CustomerController {
 

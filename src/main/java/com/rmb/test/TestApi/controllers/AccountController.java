@@ -20,7 +20,7 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 @RestController
-@RequestMapping("/account")
+@RequestMapping("/api/account")
 @Api(tags = "Account Info APIs")
 public class AccountController {
     @Autowired

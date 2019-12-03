@@ -22,7 +22,7 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 @RestController
-@RequestMapping("/transactions")
+@RequestMapping("/api/transactions")
 @Api(tags = "Transactions Info APIs")
 public class TransactionsController {
 

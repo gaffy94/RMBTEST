@@ -1,58 +1,86 @@
-//package com.rmb.test.TestApi.configs;
-//
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.boot.autoconfigure.security.SecurityProperties;
-//import org.springframework.context.annotation.Bean;
-//import org.springframework.context.annotation.ComponentScan;
-//import org.springframework.core.annotation.Order;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-//import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-//import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-//import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
-//
-//@Order(SecurityProperties.BASIC_AUTH_ORDER)
-//@ComponentScan("com.rmb.test")
-//public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
-//    @Autowired
-//    private CustomAuthenticationProvider authProvider;
-//    @Autowired
-//    private RESTAuthenticationEntryPoint authenticationEntryPoint;
-//    @Autowired
-//    private RESTAuthenticationFailureHandler authenticationFailureHandler;
-//    @Autowired
-//    private RESTAuthenticationSuccessHandler authenticationSuccessHandler;
-//
-//
-//    @Value("${enable-csrf}")
-//    private boolean csrfEnabled;
-//
-//    @Override
-//    protected void configure(
-//            AuthenticationManagerBuilder auth) throws Exception {
-//
-//        auth.authenticationProvider(authProvider);
-//    }
-//
-//    @Override
-//    protected void configure(HttpSecurity http) throws Exception {
-//        http.authorizeRequests().antMatchers("/api/**").authenticated().and().httpBasic();
-//        http.logout()
-//                .invalidateHttpSession(true)
-//                .deleteCookies("SESSION")
-//                .clearAuthentication(true)
-//                .logoutSuccessHandler((new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)));
-//        if(!csrfEnabled)
-//        {
-//            http.csrf().disable();
-//        }
-//    }
-//
-//    @SuppressWarnings("deprecation")
-//    @Bean
-//    public static NoOpPasswordEncoder passwordEncoder() {
-//        return (NoOpPasswordEncoder) NoOpPasswordEncoder.getInstance();
-//    }
-//}
+package com.rmb.test.TestApi.configs;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
+import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
+
+import java.util.logging.Logger;
+
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private static final Logger LOGGER = Logger.getLogger(SpringSecurityConfig.class.getName());
+
+    @Value("${security.signing-key}")
+    private String signingKey;
+
+    @Value("${security.encoding-strength}")
+    private Integer encodingStrength;
+
+    @Value("${security.security-realm}")
+    private String securityRealm;
+
+    @Autowired
+    CustomAuthenticationManager customAuthenticationManager;
+
+    @Bean
+    @Override
+    protected AuthenticationManager authenticationManager() throws Exception {
+        return customAuthenticationManager;
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .httpBasic()
+                .realmName(securityRealm)
+                .and()
+                .csrf()
+                .disable();
+
+    }
+
+    @Bean
+    public JwtAccessTokenConverter accessTokenConverter() {
+        JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
+        converter.setSigningKey(signingKey);
+        return converter;
+    }
+
+    @Bean
+    public TokenStore tokenStore() {
+        return new JwtTokenStore(accessTokenConverter());
+    }
+
+    @Bean
+    @Primary //Making this primary to avoid any accidental duplication with another token service instance of the same name
+    public DefaultTokenServices tokenServices() {
+        DefaultTokenServices defaultTokenServices = new DefaultTokenServices();
+        defaultTokenServices.setTokenStore(tokenStore());
+        defaultTokenServices.setSupportRefreshToken(true);
+        return defaultTokenServices;
+    }
+}
